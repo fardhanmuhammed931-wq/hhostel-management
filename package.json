@@ -1,35 +1,27 @@
 {
-  "name": "hostel-management-server",
+  "name": "hostel-management-system",
   "version": "1.0.0",
-  "type": "module",
-  "description": "REST API backend for Hostel Management System using Express, TypeScript, and MySQL",
-  "main": "dist/index.js",
+  "description": "Full-stack responsive Hostel Management System with Glassmorphism UI, React, Node.js, Express, and MySQL",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "db:init": "node ../database/init-db.cjs",
-    "db:seed": "node ../database/init-db.cjs --seed"
-  },
-  "dependencies": {
-    "alasql": "^4.20.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "mysql2": "^3.9.7"
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "db:init": "node database/init-db.cjs",
+    "db:seed": "node database/init-db.cjs --seed"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^20.12.7",
-    "tsx": "^4.7.2",
-    "typescript": "^5.4.5"
-  }
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "hostel-management",
+    "react",
+    "express",
+    "mysql",
+    "glassmorphism",
+    "typescript"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT"
 }
