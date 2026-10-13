@@ -1,243 +1,75 @@
-export type UserRole = 'admin' | 'warden' | 'student';
-export type UserStatus = 'active' | 'inactive' | 'suspended';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { ENV } from './config/env.js';
+import { testDbConnection } from './config/db.js';
+import apiRouter from './routes/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
-export interface User {
-  id: number;
-  email: string;
-  full_name: string;
-  role: UserRole;
-  phone?: string | null;
-  avatar_url?: string | null;
-  status: UserStatus;
-  last_login?: string | null;
-  created_at: string;
-  student_id?: string | null;
-  studentRecordId?: number | null;
-  hostel_id?: number | null;
-  hostel_name?: string | null;
-  room_id?: number | null;
-  room_number?: string | null;
-  department?: string | null;
-  course?: string | null;
+const app = express();
+
+// Security & utility middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+const allowedOrigins = [
+  ENV.CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow during development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+if (ENV.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
 }
 
-export interface Student {
-  id: number;
-  user_id?: number | null;
-  student_id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  gender: 'male' | 'female' | 'other';
-  date_of_birth?: string | null;
-  department: string;
-  course: string;
-  academic_year: string;
-  guardian_name: string;
-  guardian_phone: string;
-  address: string;
-  admission_date: string;
-  status: 'active' | 'inactive' | 'graduated' | 'suspended';
-  created_at: string;
-  updated_at: string;
-  hostel_id?: number | null;
-  hostel_name?: string | null;
-  room_id?: number | null;
-  room_number?: string | null;
-  allocation_id?: number | null;
-  bed_number?: string | null;
-  allocated_since?: string | null;
-}
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'online',
+    timestamp: new Date().toISOString(),
+    service: 'Hostel Management System API',
+    version: '1.0.0',
+  });
+});
 
-export interface Hostel {
-  id: number;
-  name: string;
-  code: string;
-  type: 'boys' | 'girls' | 'co-ed';
-  total_floors: number;
-  warden_id?: number | null;
-  warden_name?: string | null;
-  contact_number?: string | null;
-  address?: string | null;
-  description?: string | null;
-  status: 'active' | 'maintenance' | 'inactive';
-  created_at: string;
-  updated_at: string;
-  total_rooms?: number;
-  total_capacity?: number;
-  total_occupants?: number;
-}
+// Mount modular API routes
+app.use('/api', apiRouter);
 
-export interface Room {
-  id: number;
-  hostel_id: number;
-  hostel_name?: string;
-  hostel_code?: string;
-  room_number: string;
-  floor: number;
-  room_type: 'single' | 'double' | 'triple' | 'quad' | 'dormitory';
-  capacity: number;
-  current_occupancy: number;
-  fee_per_month: number;
-  status: 'available' | 'partially_occupied' | 'full' | 'under_maintenance';
-  amenities?: string | null;
-  description?: string | null;
-  available_beds?: number;
-  created_at: string;
-  updated_at: string;
-  occupants?: any[];
-}
+// Central error handler
+app.use(errorHandler);
 
-export interface RoomAllocation {
-  id: number;
-  student_id: number;
-  student_name?: string;
-  student_code?: string;
-  student_email?: string;
-  student_phone?: string;
-  room_id: number;
-  room_number?: string;
-  room_type?: string;
-  floor?: number;
-  hostel_id?: number;
-  hostel_name?: string;
-  bed_number?: string | null;
-  start_date: string;
-  end_date?: string | null;
-  checkout_date?: string | null;
-  status: 'active' | 'transferred' | 'checked_out' | 'cancelled';
-  notes?: string | null;
-  allocated_by?: number | null;
-  allocated_by_name?: string | null;
-  created_at: string;
-}
+// Start server
+const PORT = ENV.PORT;
+app.listen(PORT, async () => {
+  console.log(`\n======================================================`);
+  console.log(`🚀 Hostel Management Backend running on port ${PORT}`);
+  console.log(`📡 REST API endpoint: http://localhost:${PORT}/api`);
+  console.log(`💓 Health check:      http://localhost:${PORT}/api/health`);
+  console.log(`======================================================`);
 
-export interface FeeRecord {
-  id: number;
-  student_id: number;
-  student_name?: string;
-  student_code?: string;
-  student_email?: string;
-  room_number?: string;
-  hostel_name?: string;
-  fee_category: 'hostel_rent' | 'mess_fee' | 'maintenance' | 'caution_deposit' | 'utilities' | 'other';
-  academic_period: string;
-  amount_due: number;
-  amount_paid: number;
-  balance: number;
-  due_date: string;
-  status: 'pending' | 'partially_paid' | 'paid' | 'overdue';
-  description?: string | null;
-  created_at: string;
-}
+  // Verify database connection
+  await testDbConnection();
+});
 
-export interface Payment {
-  id: number;
-  fee_record_id: number;
-  student_id: number;
-  student_name?: string;
-  student_code?: string;
-  student_email?: string;
-  student_phone?: string;
-  department?: string;
-  course?: string;
-  fee_category?: string;
-  academic_period?: string;
-  amount_due?: number;
-  total_fee_paid?: number;
-  room_number?: string;
-  hostel_name?: string;
-  receipt_number: string;
-  amount: number;
-  payment_method: 'cash' | 'bank_transfer' | 'upi' | 'card' | 'cheque' | 'online';
-  transaction_reference?: string | null;
-  payment_date: string;
-  recorded_by?: number | null;
-  recorded_by_name?: string | null;
-  remarks?: string | null;
-  created_at: string;
-}
-
-export interface Visitor {
-  id: number;
-  name: string;
-  phone: string;
-  id_proof_type?: string | null;
-  id_proof_number?: string | null;
-  address?: string | null;
-}
-
-export interface VisitorLog {
-  id: number;
-  visitor_id: number;
-  visitor_name: string;
-  visitor_phone: string;
-  id_proof_type?: string | null;
-  id_proof_number?: string | null;
-  student_id: number;
-  student_name: string;
-  student_code: string;
-  room_number?: string;
-  hostel_name?: string;
-  relationship: string;
-  purpose: string;
-  check_in_time: string;
-  check_out_time?: string | null;
-  status: 'checked_in' | 'checked_out';
-  recorded_by?: number | null;
-  recorded_by_name?: string | null;
-  remarks?: string | null;
-}
-
-export interface MaintenanceRequest {
-  id: number;
-  ticket_number: string;
-  student_id: number;
-  student_name: string;
-  student_code: string;
-  student_phone?: string;
-  room_id: number;
-  room_number: string;
-  floor?: number;
-  hostel_id?: number;
-  hostel_name: string;
-  category: 'electrical' | 'plumbing' | 'cleaning' | 'furniture' | 'internet' | 'room_facilities' | 'other';
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'emergency';
-  status: 'submitted' | 'in_progress' | 'resolved' | 'closed';
-  assigned_to?: number | null;
-  assigned_to_name?: string | null;
-  resolution_notes?: string | null;
-  resolved_at?: string | null;
-  created_at: string;
-}
-
-export interface AttendanceRecord {
-  student_id: number;
-  student_code: string;
-  student_name: string;
-  department: string;
-  room_number?: string;
-  hostel_name?: string;
-  hostel_id?: number;
-  attendance_status: 'present' | 'absent' | 'on_leave' | 'not_marked';
-  attendance_id?: number;
-  remarks?: string | null;
-  attendance_date?: string;
-  recorded_by_name?: string | null;
-}
-
-export interface DashboardStats {
-  totalStudents: number;
-  totalRooms: number;
-  occupiedRooms: number;
-  availableRooms: number;
-  totalCapacity: number;
-  totalOccupancy: number;
-  totalPendingFees: number;
-  totalCollectedFees: number;
-  pendingMaintenance: number;
-  todayVisitors: number;
-  occupancyPercentage: number;
-}
+export default app;
